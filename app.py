@@ -1,53 +1,77 @@
 import streamlit as st
 import requests
+import uuid
 
-API_URL = "http://localhost:3000/api/v1/prediction/799ce79f-29ea-43e7-9a67-8fabebd634a1"
+API_URL = "http://localhost:3000/api/v1/prediction/c66e89c5-f202-4d8d-9e04-c70d3bb43e08"
 
-def query_api(question):
-    payload = {"question": question}
-    try:
-        response = requests.post(API_URL, json=payload, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.Timeout:
-        return {"error": "The request timed out. Please try again later."}
-    except requests.exceptions.ConnectionError:
-        return {"error": "Failed to connect to the API. Is it running?"}
-    except requests.exceptions.HTTPError as http_err:
-        return {"error": f"HTTP error occurred: {http_err}"}
-    except requests.exceptions.RequestException as e:
-        return {"error": f"An error occurred: {e}"}
+st.title("Chatbot Streamlit App")
 
+# Initialize session state variables
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
+if 'chat_id' not in st.session_state:
+    st.session_state['chat_id'] = str(uuid.uuid4())
+if 'session_id' not in st.session_state:
+    st.session_state['session_id'] = str(uuid.uuid4())
+if 'chat_message_id' not in st.session_state:
+    st.session_state['chat_message_id'] = None  # Will be set when sending a message
 
-st.set_page_config(page_title="Chatbot", page_icon="🤖")
-st.title("🤖 Chatbot")
-
-for msg in st.session_state['messages']:
-    if msg['role'] == 'user':
-        st.markdown(f"**You:** {msg['content']}")
-    elif msg['role'] == 'bot':
-        st.markdown(f"**Bot:** {msg['content']}")
-
-user_input = st.text_input("You:", key="input")
-
-if st.button("Send") and user_input:
-    st.session_state['messages'].append({"role": "user", "content": user_input})
-    
-    with st.spinner("Bot is typing..."):
-        output = query_api(user_input)
-    
-    if 'error' in output:
-        bot_response = "Sorry, I couldn't process your request."
-        st.error(f"Error: {output['error']}")
+# Display the conversation using st.chat_message
+for message in st.session_state['messages']:
+    if message['role'] == 'user':
+        with st.chat_message("user"):
+            st.write(message['content'])
     else:
-        bot_response = output.get('answer', "I'm not sure how to respond to that.")
-    
-    st.session_state['messages'].append({"role": "bot", "content": bot_response})
-    st.session_state['input'] = ""
-    st.experimental_rerun()
+        with st.chat_message("assistant"):
+            st.write(message['content'])
 
-if st.button("Clear Chat"):
-    st.session_state['messages'] = []
-    st.experimental_rerun()
+# Accept user input using st.chat_input
+user_input = st.chat_input("Type your message here...")
+
+if user_input:
+    # Trim whitespace
+    user_input = user_input.strip()
+
+    if user_input:
+        # Generate a new chat_message_id for each user message
+        st.session_state['chat_message_id'] = str(uuid.uuid4())
+
+        # Append user message to session state
+        st.session_state['messages'].append({'role': 'user', 'content': user_input})
+
+        # Display user's message
+        with st.chat_message("user"):
+            st.write(user_input)
+
+        # Prepare payload for API request
+        payload = {
+            "question": user_input,
+            "chatId": st.session_state['chat_id'],
+            "sessionId": st.session_state['session_id'],
+            "chatMessageId": st.session_state['chat_message_id'],
+            # Include other required fields if necessary
+        }
+
+        # Function to send the request
+        def query(payload):
+            response = requests.post(API_URL, json=payload)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            return response.json()
+
+        # Send the request and get the response
+        try:
+            data = query(payload)
+
+            # Extract the bot's reply from the 'text' field
+            bot_reply = data.get('text', 'No response from the bot.')
+
+            # Append bot reply to session state
+            st.session_state['messages'].append({'role': 'bot', 'content': bot_reply})
+
+            # Display bot's message
+            with st.chat_message("assistant"):
+                st.write(bot_reply)
+        except requests.exceptions.RequestException as e:
+            st.error(f"An error occurred: {e}")
+    else:
+        st.warning("Please enter a message before sending.")
