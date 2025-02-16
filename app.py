@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import uuid
 
-API_URL = "http://localhost:3000/api/v1/prediction/074c3b2f-79c3-47a0-81d1-ac05dddc473d"
+API_URL = "http://localhost:3000/api/v1/prediction/b1ebddb5-2b43-480b-bba9-7b7457d9e760"
 
 def query(payload):
     response = requests.post(API_URL, json=payload)
