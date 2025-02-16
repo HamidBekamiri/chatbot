@@ -4,6 +4,10 @@ import uuid
 
 API_URL = "http://localhost:3000/api/v1/prediction/074c3b2f-79c3-47a0-81d1-ac05dddc473d"
 
+def query(payload):
+    response = requests.post(API_URL, json=payload)
+    return response.json()
+
 st.title("Chatbot Streamlit App")
 
 # Initialize session state variables
@@ -16,16 +20,10 @@ if 'session_id' not in st.session_state:
 if 'chat_message_id' not in st.session_state:
     st.session_state['chat_message_id'] = None  # Will be set when sending a message
 
-# Function to send the API request
-def query_api(payload):
-    response = requests.post(API_URL, json=payload)
-    response.raise_for_status()  # Raise an exception for HTTP errors
-    return response.json()
-
 # Display the conversation using st.chat_message
 for message in st.session_state['messages']:
-    # Use "user" for user messages and "assistant" for any other messages
-    if message['role'].lower() == 'user':
+    role = message['role'].lower()
+    if role == 'user':
         with st.chat_message("user"):
             st.write(message['content'])
     else:
@@ -36,17 +34,13 @@ for message in st.session_state['messages']:
 user_input = st.chat_input("Type your message here...")
 
 if user_input:
-    # Trim whitespace
     user_input = user_input.strip()
-
     if user_input:
         # Generate a new chat_message_id for each user message
         st.session_state['chat_message_id'] = str(uuid.uuid4())
 
-        # Append user message to session state
+        # Append user message to session state and display it
         st.session_state['messages'].append({'role': 'user', 'content': user_input})
-
-        # Display user's message
         with st.chat_message("user"):
             st.write(user_input)
 
@@ -56,20 +50,15 @@ if user_input:
             "chatId": st.session_state['chat_id'],
             "sessionId": st.session_state['session_id'],
             "chatMessageId": st.session_state['chat_message_id'],
-            # Include other required fields if necessary
         }
 
         # Send the request and get the response
         try:
-            data = query_api(payload)
-
-            # Extract the bot's reply from the 'text' field
+            data = query(payload)
             bot_reply = data.get('text', 'No response from the bot.')
 
-            # Append bot reply to session state (using consistent role "assistant")
+            # Append bot reply to session state and display it
             st.session_state['messages'].append({'role': 'assistant', 'content': bot_reply})
-
-            # Display bot's message
             with st.chat_message("assistant"):
                 st.write(bot_reply)
         except requests.exceptions.RequestException as e:
