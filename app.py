@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import uuid
 
-API_URL = "http://localhost:3000/api/v1/prediction/c66e89c5-f202-4d8d-9e04-c70d3bb43e08"
+API_URL = "http://localhost:3000/api/v1/prediction/074c3b2f-79c3-47a0-81d1-ac05dddc473d"
 
 st.title("Chatbot Streamlit App")
 
