@@ -4,6 +4,7 @@ import uuid
 
 API_URL = "http://localhost:3000/api/v1/prediction/074c3b2f-79c3-47a0-81d1-ac05dddc473d"
 
+
 st.title("Chatbot Streamlit App")
 
 # Initialize session state variables
